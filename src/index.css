@@ -1,0 +1,30 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@500;700;900&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-kerala-green text-coconut font-body overflow-x-hidden antialiased min-h-screen;
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-display;
+  }
+}
+
+@layer utilities {
+  .glass-panel {
+    @apply bg-kerala-green-light/40 backdrop-blur-md border border-mural-gold/20 shadow-xl rounded-2xl;
+  }
+  
+  .btn-primary {
+    @apply bg-gradient-to-r from-mural-gold to-mural-gold-dark text-kerala-green font-display font-bold py-3 px-6 rounded-xl shadow-lg transform transition-all active:scale-95 disabled:opacity-50 disabled:active:scale-100;
+  }
+  
+  .btn-danger {
+    @apply bg-theyyam-red text-coconut font-display font-bold py-3 px-6 rounded-xl shadow-lg transform transition-all active:scale-95 disabled:opacity-50 disabled:active:scale-100;
+  }
+}
