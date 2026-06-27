@@ -136,12 +136,19 @@ export const PUNISHMENTS = [
   "Tell a really bad Mallu WhatsApp uncle joke and force everyone to laugh."
 ];
 
-export const generateGameRoles = (players, imposterCount, enablePottan, categories) => {
-  // 1. Pick a random word pair from selected categories
+export const generateGameRoles = (players, imposterCount, enablePottan, categories, customWords = []) => {
+  // 1. Determine active category and words
   const activeCategories = categories.length > 0 ? categories : ['Food'];
   const randomCategory = activeCategories[Math.floor(Math.random() * activeCategories.length)];
-  const categoryWords = WORD_BANK[randomCategory];
-  const wordPair = categoryWords[Math.floor(Math.random() * categoryWords.length)];
+  
+  let wordPair;
+  if (randomCategory === 'Custom' && customWords.length > 0) {
+    wordPair = customWords[Math.floor(Math.random() * customWords.length)];
+  } else {
+    const fallbackCategory = randomCategory === 'Custom' ? 'Food' : randomCategory;
+    const categoryWords = WORD_BANK[fallbackCategory];
+    wordPair = categoryWords[Math.floor(Math.random() * categoryWords.length)];
+  }
   
   // 2. Pro-Tip Logic: Randomly swap majority/minority words to prevent pattern recognition
   const swapMajority = Math.random() > 0.5;

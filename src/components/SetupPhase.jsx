@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Users, UserPlus, Settings, Play, X, Info, Edit2, Sliders, Trash2 } from 'lucide-react';
+import { Users, UserPlus, Settings, Play, X, Info, Edit2, Sliders, Trash2, BookOpen, PlusCircle } from 'lucide-react';
 import { useGame } from '../GameContext';
 import { WORD_BANK } from '../utils/gameLogic';
+import { SFX, Haptics } from '../utils/engine';
 
 const SetupPhase = () => {
   const { 
@@ -10,17 +11,23 @@ const SetupPhase = () => {
     imposterCount, setImposterCount,
     enablePottan, setEnablePottan,
     selectedCategories, setSelectedCategories,
+    customWords, setCustomWords,
     enableTimer, setEnableTimer,
     multiRoundVoting, setMultiRoundVoting,
     pottanCheatSheet, setPottanCheatSheet,
     enableScoreboard, setEnableScoreboard,
-    startGame, hardResetApp
+    startGame, hardResetApp, setGameState
   } = useGame();
 
   const [newPlayerName, setNewPlayerName] = useState('');
   const [editingId, setEditingId] = useState(null);
   const [editName, setEditName] = useState('');
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [showRules, setShowRules] = useState(false);
+  const [showCustomWords, setShowCustomWords] = useState(false);
+
+  const [customWord1, setCustomWord1] = useState('');
+  const [customWord2, setCustomWord2] = useState('');
 
   const maxKallans = Math.max(1, Math.ceil((players.length - (enablePottan ? 1 : 0)) / 2) - 1);
 
@@ -179,17 +186,19 @@ const SetupPhase = () => {
           <div className="flex justify-between items-center mb-2">
             <div>
               <span className="block font-medium">Number of Kallans</span>
-              <span className="text-xs text-coconut/50">Max {maxKallans}</span>
+              <span className="text-xs text-coconut/50">Max {maxKallans} {players.length < 5 && '(Add players to increase)'}</span>
             </div>
             <div className="flex items-center gap-3 bg-kerala-green/50 rounded-lg p-1">
               <button 
                 onClick={() => setImposterCount(Math.max(1, imposterCount - 1))}
-                className="w-8 h-8 flex items-center justify-center bg-kerala-green-light rounded-md text-mural-gold font-bold active:scale-95 transition-transform"
+                disabled={imposterCount <= 1}
+                className="w-8 h-8 flex items-center justify-center bg-kerala-green-light rounded-md text-mural-gold font-bold active:scale-95 transition-transform disabled:opacity-30"
               >-</button>
               <span className="font-bold w-4 text-center">{imposterCount}</span>
               <button 
                 onClick={() => setImposterCount(Math.min(maxKallans, imposterCount + 1))}
-                className="w-8 h-8 flex items-center justify-center bg-kerala-green-light rounded-md text-mural-gold font-bold active:scale-95 transition-transform"
+                disabled={imposterCount >= maxKallans}
+                className="w-8 h-8 flex items-center justify-center bg-kerala-green-light rounded-md text-mural-gold font-bold active:scale-95 transition-transform disabled:opacity-30"
               >+</button>
             </div>
           </div>
@@ -204,10 +213,16 @@ const SetupPhase = () => {
           <div className="border-t border-white/5 pt-4 mt-4">
             <span className="block font-medium mb-3 flex items-center gap-2">Word Categories <span className="text-xs font-normal text-coconut/50">(Select at least 1)</span></span>
             <div className="flex flex-wrap gap-2">
-              {Object.keys(WORD_BANK).map(cat => (
+              {[...Object.keys(WORD_BANK), 'Custom'].map(cat => (
                 <button
                   key={cat}
-                  onClick={() => toggleCategory(cat)}
+                  onClick={() => {
+                    Haptics.light();
+                    if (cat === 'Custom' && !selectedCategories.includes('Custom')) {
+                      setShowCustomWords(true);
+                    }
+                    toggleCategory(cat);
+                  }}
                   className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors border active:scale-95 ${
                     selectedCategories.includes(cat) 
                       ? 'bg-mural-gold/20 border-mural-gold text-mural-gold' 
@@ -270,12 +285,120 @@ const SetupPhase = () => {
       </div>
 
       <button 
-        onClick={startGame}
+        onClick={() => {
+          Haptics.light();
+          SFX.swoosh();
+          startGame();
+        }}
         className="btn-primary mt-2 flex items-center justify-center gap-2 text-lg w-full py-4 shadow-[0_0_30px_rgba(244,162,97,0.3)]"
       >
         <Play size={24} fill="currentColor" />
         START GAME
       </button>
+
+      <div className="flex justify-between items-center mt-2 px-2">
+        <button 
+          onClick={() => { Haptics.light(); setShowRules(true); }}
+          className="text-xs text-coconut/50 hover:text-mural-gold transition-colors font-medium flex items-center gap-1"
+        >
+          <BookOpen size={14} /> How to Play
+        </button>
+        <button 
+          onClick={() => { Haptics.light(); setGameState('about'); }} 
+          className="text-xs text-coconut/50 hover:text-mural-gold transition-colors font-medium"
+        >
+          Developed by Abishek
+        </button>
+      </div>
+
+      {/* Rules Modal */}
+      <AnimatePresence>
+        {showRules && (
+          <motion.div 
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-kerala-green/90 backdrop-blur-sm"
+          >
+            <motion.div 
+              initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }}
+              className="bg-kerala-green-light border border-white/10 rounded-2xl p-6 w-full max-w-sm shadow-2xl relative max-h-[80vh] overflow-y-auto"
+            >
+              <button onClick={() => setShowRules(false)} className="absolute top-4 right-4 text-coconut/50 hover:text-white">
+                <X size={24} />
+              </button>
+              <h3 className="text-2xl font-display font-bold text-mural-gold mb-4">How to Play</h3>
+              <div className="space-y-4 text-sm text-coconut/80 leading-relaxed">
+                <p><strong>Nattukar:</strong> You will all receive the SAME secret word. Your goal is to figure out who the Kallan is.</p>
+                <p><strong>Kallan:</strong> You will receive a SIMILAR, but different word. You must blend in and pretend you have the Nattukar's word.</p>
+                <p><strong>Pottan (Optional):</strong> You have NO word. You are completely blind and must lie your way to survival.</p>
+                <div className="bg-white/5 p-3 rounded-lg border border-white/10 mt-4">
+                  <p className="font-bold text-theyyam-red mb-1">Sudden Death Mode</p>
+                  <p className="text-xs">If "Multi-Round Voting" is OFF, catching ONE Kallan wins the game for Nattukar. But voting out ONE Nattukaran instantly loses the game!</p>
+                </div>
+                <p className="text-xs opacity-50 text-center mt-6">All settings and scores are securely saved locally on your device (localStorage).</p>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Custom Words Modal */}
+      <AnimatePresence>
+        {showCustomWords && (
+          <motion.div 
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-kerala-green/90 backdrop-blur-sm"
+          >
+            <motion.div 
+              initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }}
+              className="bg-kerala-green-light border border-mural-gold/30 rounded-2xl p-6 w-full max-w-sm shadow-2xl"
+            >
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-xl font-bold text-mural-gold">Custom Words</h3>
+                <button onClick={() => setShowCustomWords(false)} className="text-coconut/50 hover:text-white">
+                  <X size={24} />
+                </button>
+              </div>
+              <p className="text-sm text-coconut/80 mb-4">Add your own inside jokes! They will be saved to your device.</p>
+              
+              <div className="space-y-3 mb-4 max-h-48 overflow-y-auto pr-2">
+                {customWords.map((cw, i) => (
+                  <div key={i} className="flex justify-between items-center bg-black/20 p-2 rounded-lg text-sm">
+                    <span className="truncate">{cw.nattukaran} <span className="text-white/30">|</span> {cw.kallan}</span>
+                    <button onClick={() => setCustomWords(customWords.filter((_, idx) => idx !== i))} className="text-theyyam-red/70 hover:text-theyyam-red p-1">
+                      <X size={16} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex flex-col gap-2 bg-white/5 p-3 rounded-xl border border-white/10">
+                <input 
+                  type="text" placeholder="Nattukar Word..." value={customWord1} onChange={e => setCustomWord1(e.target.value)}
+                  className="bg-black/20 border border-white/10 rounded px-3 py-2 text-sm focus:outline-none focus:border-mural-gold text-white"
+                />
+                <input 
+                  type="text" placeholder="Kallan Word..." value={customWord2} onChange={e => setCustomWord2(e.target.value)}
+                  className="bg-black/20 border border-white/10 rounded px-3 py-2 text-sm focus:outline-none focus:border-mural-gold text-white"
+                />
+                <button 
+                  onClick={() => {
+                    if (customWord1.trim() && customWord2.trim()) {
+                      setCustomWords([...customWords, { nattukaran: customWord1.trim(), kallan: customWord2.trim() }]);
+                      setCustomWord1(''); setCustomWord2('');
+                      Haptics.light();
+                    }
+                  }}
+                  disabled={!customWord1.trim() || !customWord2.trim()}
+                  className="w-full mt-2 bg-mural-gold/20 text-mural-gold font-bold p-2 rounded flex justify-center items-center gap-1 disabled:opacity-30"
+                >
+                  <PlusCircle size={16} /> ADD PAIR
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
     </motion.div>
   );
 };

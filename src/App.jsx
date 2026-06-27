@@ -4,6 +4,7 @@ import PassPhase from './components/PassPhase';
 import DiscussPhase from './components/DiscussPhase';
 import VotingPhase from './components/VotingPhase';
 import ResultsPhase from './components/ResultsPhase';
+import AboutPhase from './components/AboutPhase';
 import { AnimatePresence } from 'framer-motion';
 
 function App() {
@@ -21,6 +22,8 @@ function App() {
         return <VotingPhase key="voting" />;
       case 'results':
         return <ResultsPhase key="results" />;
+      case 'about':
+        return <AboutPhase key="about" />;
       default:
         return <SetupPhase key="setup" />;
     }

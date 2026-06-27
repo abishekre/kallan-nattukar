@@ -1,4 +1,4 @@
-import React, { createContext, useContext } from 'react';
+import React, { createContext, useContext, useEffect } from 'react';
 import { generateGameRoles } from './utils/gameLogic';
 import { useLocalStorage } from './utils/useLocalStorage';
 
@@ -23,24 +23,51 @@ export const GameProvider = ({ children }) => {
   const [pottanCheatSheet, setPottanCheatSheet] = useLocalStorage('kn_pottanCheatSheet', false);
   const [enableScoreboard, setEnableScoreboard] = useLocalStorage('kn_enableScoreboard', true);
 
-  // Scoreboard Object: { playerId: score }
+  const [customWords, setCustomWords] = useLocalStorage('kn_customWords', []);
+
+  // Scoreboard Object: { playerId: { points: 0, timesKallan: 0, timesPottan: 0, wrongfulDeaths: 0 } }
   const [scores, setScores] = useLocalStorage('kn_scores', {});
 
   // Current round data
   const [assignedRoles, setAssignedRoles] = useLocalStorage('kn_assignedRoles', []); 
   const [activeCategory, setActiveCategory] = useLocalStorage('kn_activeCategory', null);
 
+  // History API Back Button Intercept
+  useEffect(() => {
+    const handlePopState = (e) => {
+      e.preventDefault();
+      if (gameState !== 'setup') {
+        setGameState('setup');
+      }
+    };
+    window.history.pushState(null, null, window.location.href);
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [gameState, setGameState]);
+
   const startGame = () => {
-    const { roles, category } = generateGameRoles(players, imposterCount, enablePottan, selectedCategories);
+    // Generate roles passing customWords if needed
+    const { roles, category } = generateGameRoles(players, imposterCount, enablePottan, selectedCategories, customWords);
     setAssignedRoles(roles);
     setActiveCategory(category);
     
-    // Initialize scores for new players
+    // Initialize scores & track roles for new round
     if (enableScoreboard) {
       const newScores = { ...scores };
       players.forEach(p => {
-        if (newScores[p.id] === undefined) newScores[p.id] = 0;
+        // If it's a legacy number, convert it. If it doesn't exist, create it.
+        if (typeof newScores[p.id] === 'number') {
+          newScores[p.id] = { points: newScores[p.id], timesKallan: 0, timesPottan: 0, wrongfulDeaths: 0 };
+        } else if (!newScores[p.id]) {
+          newScores[p.id] = { points: 0, timesKallan: 0, timesPottan: 0, wrongfulDeaths: 0 };
+        }
       });
+      
+      roles.forEach(p => {
+        if (p.role === 'Kallan') newScores[p.id].timesKallan += 1;
+        if (p.role === 'Pottan') newScores[p.id].timesPottan += 1;
+      });
+      
       setScores(newScores);
     }
     
@@ -64,7 +91,10 @@ export const GameProvider = ({ children }) => {
     setScores(prev => {
       const newScores = { ...prev };
       pointAssignments.forEach(pa => {
-        newScores[pa.id] = (newScores[pa.id] || 0) + pa.points;
+        const playerStats = newScores[pa.id] ? { ...newScores[pa.id] } : { points: 0, timesKallan: 0, timesPottan: 0, wrongfulDeaths: 0 };
+        if (pa.points) playerStats.points += pa.points;
+        if (pa.wrongfulDeath) playerStats.wrongfulDeaths += 1;
+        newScores[pa.id] = playerStats;
       });
       return newScores;
     });
@@ -95,6 +125,7 @@ export const GameProvider = ({ children }) => {
     imposterCount, setImposterCount,
     enablePottan, setEnablePottan,
     selectedCategories, setSelectedCategories,
+    customWords, setCustomWords,
     enableTimer, setEnableTimer,
     multiRoundVoting, setMultiRoundVoting,
     pottanCheatSheet, setPottanCheatSheet,

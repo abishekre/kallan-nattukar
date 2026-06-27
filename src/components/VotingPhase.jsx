@@ -3,11 +3,13 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Vote, Skull, X, Check, ArrowRight } from 'lucide-react';
 import { useGame } from '../GameContext';
 
+import { SFX, Haptics } from '../utils/engine';
+
 const VotingPhase = () => {
   const { assignedRoles, eliminatePlayer, setGameState, multiRoundVoting } = useGame();
   
   const [selectedPlayer, setSelectedPlayer] = useState(null);
-  const [eliminationResult, setEliminationResult] = useState(null); // { player, role, remainingKallans }
+  const [eliminationResult, setEliminationResult] = useState(null);
 
   const activePlayers = assignedRoles.filter(p => !p.eliminated);
   const activeKallans = activePlayers.filter(p => p.role === 'Kallan');
@@ -16,16 +18,20 @@ const VotingPhase = () => {
   const confirmElimination = () => {
     if (!selectedPlayer) return;
     
+    Haptics.heavy();
+    SFX.boom();
+    
     eliminatePlayer(selectedPlayer.id);
 
     if (multiRoundVoting) {
       // Logic for multi-round
       const wasKallan = selectedPlayer.role === 'Kallan';
+      const wasPottan = selectedPlayer.role === 'Pottan';
       const newActiveKallans = wasKallan ? activeKallans.length - 1 : activeKallans.length;
       const newActiveNattukar = selectedPlayer.role === 'Nattukaran' ? activeNattukar.length - 1 : activeNattukar.length;
       
-      // Check win conditions
-      if (newActiveKallans === 0 || newActiveKallans >= newActiveNattukar) {
+      // Pottan penalty: If Pottan is eliminated, Kallans win instantly
+      if (wasPottan || newActiveKallans === 0 || newActiveKallans >= newActiveNattukar) {
         setGameState('results');
       } else {
         // Game continues
