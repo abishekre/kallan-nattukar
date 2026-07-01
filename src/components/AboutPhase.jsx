@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { Heart, Code2, Coffee, ArrowLeft, Globe, User, Mail } from 'lucide-react';
+import { Heart, Code2, Coffee, ArrowLeft, Camera, Briefcase } from 'lucide-react';
 import { useGame } from '../GameContext';
 
 const AboutPhase = () => {
@@ -14,12 +14,13 @@ const AboutPhase = () => {
     >
       <div className="flex items-center justify-between mb-4 mt-8">
         <button 
+          aria-label="Go back"
           onClick={() => setGameState('setup')}
           className="bg-white/10 p-2 rounded-full hover:bg-white/20 transition-colors active:scale-95"
         >
           <ArrowLeft size={24} />
         </button>
-        <h2 className="text-2xl font-display font-bold text-mural-gold">Developer</h2>
+        <h1 className="text-2xl font-display font-bold text-mural-gold">Developer</h1>
         <div className="w-10"></div> {/* Spacer for centering */}
       </div>
 
@@ -43,20 +44,21 @@ const AboutPhase = () => {
           Kallan & Nattukar is a tribute to Kerala pop culture, designed for friends to argue, laugh, and betray each other in pure Mallu style. 
         </div>
 
-        <div className="flex gap-4 z-10">
-          <button className="bg-white/5 border border-white/10 hover:bg-white/10 hover:border-mural-gold/50 hover:text-mural-gold p-3 rounded-full transition-all active:scale-95 text-coconut">
-            <Globe size={20} />
-          </button>
-          <button className="bg-white/5 border border-white/10 hover:bg-white/10 hover:border-mural-gold/50 hover:text-mural-gold p-3 rounded-full transition-all active:scale-95 text-coconut">
-            <User size={20} />
-          </button>
-          <button className="bg-white/5 border border-white/10 hover:bg-white/10 hover:border-mural-gold/50 hover:text-mural-gold p-3 rounded-full transition-all active:scale-95 text-coconut">
-            <Mail size={20} />
-          </button>
+        <div className="flex gap-4 z-10 w-full px-4 mt-2">
+          <a href="https://www.instagram.com/abishek_r_edakkalathur/" aria-label="Instagram Profile" target="_blank" rel="noopener noreferrer" className="flex-1 bg-white/5 hover:bg-white/10 transition-colors border border-white/10 p-3 rounded-xl flex justify-center items-center">
+            <Camera size={20} className="text-mural-gold" />
+          </a>
+          <a href="https://github.com/abishekre" aria-label="GitHub Profile" target="_blank" rel="noopener noreferrer" className="flex-1 bg-white/5 hover:bg-white/10 transition-colors border border-white/10 p-3 rounded-xl flex justify-center items-center">
+            <Code2 size={20} className="text-mural-gold" />
+          </a>
+          <a href="https://www.linkedin.com/in/abishek-r-edakkalathur-4822a3217/" aria-label="LinkedIn Profile" target="_blank" rel="noopener noreferrer" className="flex-1 bg-white/5 hover:bg-white/10 transition-colors border border-white/10 p-3 rounded-xl flex justify-center items-center">
+            <Briefcase size={20} className="text-mural-gold" />
+          </a>
         </div>
+
       </div>
 
-      <p className="text-center text-xs text-coconut/30 mt-auto pb-4 font-mono font-medium">
+      <p className="text-center text-xs text-coconut/60 mt-auto pb-4 font-mono font-medium">
         v1.0.0 • Handcrafted in Kerala
       </p>
     </motion.div>

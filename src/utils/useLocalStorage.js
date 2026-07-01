@@ -1,23 +1,41 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 export function useLocalStorage(key, initialValue) {
-  const [value, setValue] = useState(() => {
+  // Store both the key and the value in state
+  const [state, setState] = useState(() => {
     try {
       const item = window.localStorage.getItem(key);
-      return item ? JSON.parse(item) : initialValue;
+      return { key, value: item ? JSON.parse(item) : initialValue };
     } catch (error) {
       console.warn(`Error reading localStorage key "${key}":`, error);
-      return initialValue;
+      return { key, value: initialValue };
     }
   });
 
-  useEffect(() => {
+  // Sync state if the key changes (React pattern for derived state)
+  let currentValue = state.value;
+  if (key !== state.key) {
     try {
-      window.localStorage.setItem(key, JSON.stringify(value));
+      const item = window.localStorage.getItem(key);
+      currentValue = item ? JSON.parse(item) : initialValue;
+    } catch (error) {
+      console.warn(`Error reading localStorage key "${key}":`, error);
+      currentValue = initialValue;
+    }
+    // Update state during render to trigger an immediate re-render
+    setState({ key, value: currentValue });
+  }
+
+  // Only write to localStorage when explicitly updating the value
+  const setValue = (newValue) => {
+    try {
+      const valueToStore = newValue instanceof Function ? newValue(state.value) : newValue;
+      setState({ key, value: valueToStore });
+      window.localStorage.setItem(key, JSON.stringify(valueToStore));
     } catch (error) {
       console.warn(`Error setting localStorage key "${key}":`, error);
     }
-  }, [key, value]);
+  };
 
-  return [value, setValue];
+  return [currentValue, setValue];
 }

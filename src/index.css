@@ -4,24 +4,39 @@
 @tailwind components;
 @tailwind utilities;
 
+html, body {
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
 @layer base {
   body {
     @apply bg-kerala-green text-coconut font-body overflow-x-hidden antialiased min-h-screen;
-    -webkit-tap-highlight-color: transparent;
   }
   
   h1, h2, h3, h4, h5, h6 {
     @apply font-display;
   }
+
+  /* Prevent iOS zoom on focus */
+  input, textarea, select {
+    font-size: 16px !important;
+  }
+
+  /* Accessibility: Explicit focus rings since tap-highlight is disabled */
+  *:focus-visible {
+    outline: none;
+    @apply ring-2 ring-mural-gold ring-offset-2 ring-offset-kerala-green;
+  }
 }
 
-@layer utilities {
+@layer components {
   .glass-panel {
     @apply bg-kerala-green-light/40 backdrop-blur-md border border-mural-gold/20 shadow-xl rounded-2xl;
   }
   
   .btn-primary {
-    @apply bg-gradient-to-r from-mural-gold to-mural-gold-dark text-kerala-green font-display font-bold py-3 px-6 rounded-xl shadow-lg transform transition-all active:scale-95 disabled:opacity-50 disabled:active:scale-100;
+    @apply bg-mural-gold text-kerala-green font-display font-bold py-3 px-6 rounded-xl shadow-lg transform transition-all active:scale-95 disabled:opacity-50 disabled:active:scale-100;
   }
   
   .btn-danger {

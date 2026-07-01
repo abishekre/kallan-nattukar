@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect } from 'react';
+import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
 import { generateGameRoles } from './utils/gameLogic';
 import { useLocalStorage } from './utils/useLocalStorage';
 
@@ -7,30 +7,42 @@ const GameContext = createContext();
 export const useGame = () => useContext(GameContext);
 
 export const GameProvider = ({ children }) => {
-  const [gameState, setGameState] = useLocalStorage('kn_gameState', 'setup'); 
-  const [players, setPlayers] = useLocalStorage('kn_players', [
-    { id: 1, name: 'Dasan' }, 
-    { id: 2, name: 'Vijayan' }, 
-    { id: 3, name: 'Ramanan' }
+  // Group Profiles
+  const [profiles, setProfiles] = useLocalStorage('kn_profiles', [{ id: 'default', name: 'Default Village' }]);
+  const [activeProfileId, setActiveProfileId] = useLocalStorage('kn_activeProfile', 'default');
+  
+  // Profile-specific state
+  const [players, setPlayers] = useLocalStorage(`kn_players_${activeProfileId}`, [
+    { id: '11111111-1111-1111-1111-111111111111', name: 'Dasan' }, 
+    { id: '22222222-2222-2222-2222-222222222222', name: 'Vijayan' }, 
+    { id: '33333333-3333-3333-3333-333333333333', name: 'Ramanan' }
   ]);
+  const [scores, setScores] = useLocalStorage(`kn_scores_${activeProfileId}`, {});
+
+  // Global Settings
   const [imposterCount, setImposterCount] = useLocalStorage('kn_imposterCount', 1);
   const [enablePottan, setEnablePottan] = useLocalStorage('kn_enablePottan', false);
-  const [selectedCategories, setSelectedCategories] = useLocalStorage('kn_selectedCategories', ['Food']);
-  
-  // Advanced Settings
-  const [enableTimer, setEnableTimer] = useLocalStorage('kn_enableTimer', false);
+  const [pottanHint, setPottanHint] = useLocalStorage('kn_pottanHint', 'blind'); // 'none', 'blind', 'category'
+  const [selectedCategories, setSelectedCategories] = useLocalStorage('kn_categories', ['Sadhya & Thattukada']);
+  const [customCategoriesData, setCustomCategoriesData] = useLocalStorage('kn_customCategoriesData', {});
+  const [timerDuration, setTimerDuration] = useLocalStorage('kn_timerDuration', 180); // 0 means disabled
   const [multiRoundVoting, setMultiRoundVoting] = useLocalStorage('kn_multiRoundVoting', false);
-  const [pottanCheatSheet, setPottanCheatSheet] = useLocalStorage('kn_pottanCheatSheet', false);
   const [enableScoreboard, setEnableScoreboard] = useLocalStorage('kn_enableScoreboard', true);
+  const [enableCaughtBy, setEnableCaughtBy] = useLocalStorage('kn_enableCaughtBy', false);
+  const [enableAudio, setEnableAudio] = useLocalStorage('kn_enableAudio', true);
+  const [wordDifficulty, setWordDifficulty] = useLocalStorage('kn_wordDifficulty', 'all');
 
-  const [customWords, setCustomWords] = useLocalStorage('kn_customWords', []);
-
-  // Scoreboard Object: { playerId: { points: 0, timesKallan: 0, timesPottan: 0, wrongfulDeaths: 0 } }
-  const [scores, setScores] = useLocalStorage('kn_scores', {});
+  // Profile-specific progress
+  const [roundCount, setRoundCount] = useLocalStorage(`kn_roundCount_${activeProfileId}`, 0);
 
   // Current round data
-  const [assignedRoles, setAssignedRoles] = useLocalStorage('kn_assignedRoles', []); 
-  const [activeCategory, setActiveCategory] = useLocalStorage('kn_activeCategory', null);
+  const [gameState, setGameState] = useState('setup'); 
+  const [assignedRoles, setAssignedRoles] = useState([]);
+  const [activeCategory, setActiveCategory] = useState('');
+  const [activeDifficulty, setActiveDifficulty] = useState(1);
+  const [pottanStoleWin, setPottanStoleWin] = useState(false);
+  const [gossipText, setGossipText] = useState('');
+  const [deferredPrompt, setDeferredPrompt] = useState(null);
 
   // History API Back Button Intercept
   useEffect(() => {
@@ -40,35 +52,76 @@ export const GameProvider = ({ children }) => {
         setGameState('setup');
       }
     };
-    window.history.pushState(null, null, window.location.href);
+    // If we transition FROM setup TO playing, add a history entry so Back works
+    if (gameState === 'pass') {
+      window.history.pushState({ page: 'playing' }, null, window.location.href);
+    }
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
   }, [gameState, setGameState]);
 
-  const startGame = () => {
-    // Generate roles passing customWords if needed
-    const { roles, category } = generateGameRoles(players, imposterCount, enablePottan, selectedCategories, customWords);
-    setAssignedRoles(roles);
-    setActiveCategory(category);
+  // Legacy score migration
+  const migratedProfiles = useRef(new Set());
+  useEffect(() => {
+    if (migratedProfiles.current.has(activeProfileId)) return;
+    migratedProfiles.current.add(activeProfileId);
     
-    // Initialize scores & track roles for new round
-    if (enableScoreboard) {
-      const newScores = { ...scores };
-      players.forEach(p => {
-        // If it's a legacy number, convert it. If it doesn't exist, create it.
-        if (typeof newScores[p.id] === 'number') {
-          newScores[p.id] = { points: newScores[p.id], timesKallan: 0, timesPottan: 0, wrongfulDeaths: 0 };
-        } else if (!newScores[p.id]) {
-          newScores[p.id] = { points: 0, timesKallan: 0, timesPottan: 0, wrongfulDeaths: 0 };
+    setScores(prevScores => {
+      let migrated = false;
+      const newScores = { ...prevScores };
+      Object.keys(newScores).forEach(key => {
+        if (typeof newScores[key] === 'number') {
+          newScores[key] = { points: newScores[key], timesKallan: 0, timesPottan: 0, wrongfulDeaths: 0, winStreak: 0, caughtKallans: 0 };
+          migrated = true;
+        } else if (newScores[key] && newScores[key].caughtKallans === undefined) {
+          newScores[key].caughtKallans = 0;
+          migrated = true;
         }
       });
-      
-      roles.forEach(p => {
-        if (p.role === 'Kallan') newScores[p.id].timesKallan += 1;
-        if (p.role === 'Pottan') newScores[p.id].timesPottan += 1;
+      return migrated ? newScores : prevScores;
+    });
+  }, [activeProfileId, setScores]);
+
+  const startGame = () => {
+    const maxImposters = enablePottan ? Math.max(1, players.length - 2) : Math.max(1, players.length - 1);
+    const safeImposterCount = Math.min(imposterCount, maxImposters);
+    if (imposterCount > safeImposterCount) {
+      setImposterCount(safeImposterCount);
+    }
+    
+    const gameRolesResult = generateGameRoles(players, safeImposterCount, enablePottan, selectedCategories, customCategoriesData, wordDifficulty);
+    if (!gameRolesResult) return;
+    
+    setRoundCount(prev => prev + 1);
+    setPottanStoleWin(false);
+    setGossipText('');
+    
+    const { roles, category, difficulty } = gameRolesResult;
+    setAssignedRoles(roles);
+    setActiveCategory(category);
+    setActiveDifficulty(difficulty);
+    
+    if (enableScoreboard) {
+      setScores(prevScores => {
+        const newScores = { ...prevScores };
+        players.forEach(p => {
+          if (typeof newScores[p.id] === 'number') {
+            newScores[p.id] = { points: newScores[p.id], timesKallan: 0, timesPottan: 0, wrongfulDeaths: 0, winStreak: 0, caughtKallans: 0 };
+          } else if (!newScores[p.id]) {
+            newScores[p.id] = { points: 0, timesKallan: 0, timesPottan: 0, wrongfulDeaths: 0, winStreak: 0, caughtKallans: 0 };
+          } else if (newScores[p.id].caughtKallans === undefined) {
+            newScores[p.id].caughtKallans = 0;
+          }
+        });
+        
+        roles.forEach(p => {
+          newScores[p.id] = { ...newScores[p.id] };
+          if (p.role === 'Kallan') newScores[p.id].timesKallan += 1;
+          if (p.role === 'Pottan') newScores[p.id].timesPottan += 1;
+        });
+        
+        return newScores;
       });
-      
-      setScores(newScores);
     }
     
     setGameState('pass');
@@ -80,9 +133,9 @@ export const GameProvider = ({ children }) => {
     ));
   };
 
-  const eliminatePlayer = (playerId) => {
+  const eliminatePlayer = (playerId, caughtBy = null) => {
     setAssignedRoles(prev => prev.map(p => 
-      p.id === playerId ? { ...p, eliminated: true } : p
+      p.id === playerId ? { ...p, eliminated: true, caughtBy } : p
     ));
   };
   
@@ -91,9 +144,18 @@ export const GameProvider = ({ children }) => {
     setScores(prev => {
       const newScores = { ...prev };
       pointAssignments.forEach(pa => {
-        const playerStats = newScores[pa.id] ? { ...newScores[pa.id] } : { points: 0, timesKallan: 0, timesPottan: 0, wrongfulDeaths: 0 };
+        const playerStats = newScores[pa.id] ? { ...newScores[pa.id] } : { points: 0, timesKallan: 0, timesPottan: 0, wrongfulDeaths: 0, winStreak: 0, caughtKallans: 0 };
+        
         if (pa.points) playerStats.points += pa.points;
         if (pa.wrongfulDeath) playerStats.wrongfulDeaths += 1;
+        if (pa.caughtKallans) playerStats.caughtKallans += pa.caughtKallans;
+        
+        if (pa.result === 'win') {
+          playerStats.winStreak = (playerStats.winStreak || 0) + 1;
+        } else if (pa.result === 'loss') {
+          playerStats.winStreak = 0;
+        }
+        
         newScores[pa.id] = playerStats;
       });
       return newScores;
@@ -102,42 +164,59 @@ export const GameProvider = ({ children }) => {
 
   const resetGame = () => {
     setAssignedRoles([]);
-    setActiveCategory(null);
+    setActiveCategory('');
+    setActiveDifficulty(1);
+    setPottanStoleWin(false);
+    setGossipText('');
     setGameState('setup');
   };
 
   const playAgainSamePlayers = () => {
-    setAssignedRoles([]);
-    setActiveCategory(null);
-    setGameState('setup');
+    startGame();
+  };
+
+  const clearCurrentScores = () => {
+    setScores({});
   };
 
   const hardResetApp = () => {
-    if (window.confirm("Are you sure you want to clear all data and scores?")) {
-      window.localStorage.clear();
-      window.location.reload();
-    }
+    Object.keys(window.localStorage).forEach(key => {
+      if (key.startsWith('kn_')) {
+        window.localStorage.removeItem(key);
+      }
+    });
+    window.location.reload();
   };
 
   const value = {
     gameState, setGameState,
+    profiles, setProfiles,
+    activeProfileId, setActiveProfileId,
     players, setPlayers,
     imposterCount, setImposterCount,
     enablePottan, setEnablePottan,
     selectedCategories, setSelectedCategories,
-    customWords, setCustomWords,
-    enableTimer, setEnableTimer,
+    customCategoriesData, setCustomCategoriesData,
+    timerDuration, setTimerDuration,
     multiRoundVoting, setMultiRoundVoting,
-    pottanCheatSheet, setPottanCheatSheet,
+    pottanHint, setPottanHint,
     enableScoreboard, setEnableScoreboard,
+    enableCaughtBy, setEnableCaughtBy,
+    enableAudio, setEnableAudio,
+    wordDifficulty, setWordDifficulty,
     scores, setScores, updateScores,
+    roundCount, setRoundCount,
     assignedRoles, setAssignedRoles,
-    activeCategory,
+    activeCategory, activeDifficulty,
+    pottanStoleWin, setPottanStoleWin,
+    gossipText, setGossipText,
+    deferredPrompt, setDeferredPrompt,
     startGame,
     markPlayerRevealed,
     eliminatePlayer,
     resetGame,
     playAgainSamePlayers,
+    clearCurrentScores,
     hardResetApp
   };
 
