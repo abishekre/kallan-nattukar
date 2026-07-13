@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Users as UsersIcon, X, Check, PlusCircle, Trash2, Edit2 } from 'lucide-react';
 import { useGame } from '../../GameContext';
-import { SFX, Haptics } from '../../utils/engine';
+import { Haptics, generateId } from '../../utils/engine';
 
 export const GroupProfilesManager = ({ showProfiles, setShowProfiles }) => {
   const { profiles, setProfiles, activeProfileId, setActiveProfileId } = useGame();
@@ -12,7 +12,7 @@ export const GroupProfilesManager = ({ showProfiles, setShowProfiles }) => {
 
   const createProfile = () => {
     if (newProfileName.trim()) {
-      const newId = crypto.randomUUID();
+      const newId = generateId();
       setProfiles([...profiles, { id: newId, name: newProfileName.trim() }]);
       setActiveProfileId(newId);
       setNewProfileName('');
@@ -25,12 +25,17 @@ export const GroupProfilesManager = ({ showProfiles, setShowProfiles }) => {
     e.stopPropagation();
     if (profiles.length <= 1) return; // Prevent deleting the last profile
     
-    // Cleanup storage first
+    // Cleanup storage first (players, scores, progress + progression keys)
     try {
       localStorage.removeItem(`kn_players_${id}`);
       localStorage.removeItem(`kn_scores_${id}`);
       localStorage.removeItem(`kn_roundCount_${id}`);
-    } catch (err) {}
+      localStorage.removeItem(`kn_villageXp_${id}`);
+      localStorage.removeItem(`kn_achievements_${id}`);
+      localStorage.removeItem(`kn_chronicle_${id}`);
+    } catch {
+      /* storage unavailable — non-critical */
+    }
 
     const remaining = profiles.filter(p => p.id !== id);
     setProfiles(remaining);

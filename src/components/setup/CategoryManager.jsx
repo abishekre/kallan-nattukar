@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Edit2, Trash2 } from 'lucide-react';
 import { useGame } from '../../GameContext';
 import { WORD_BANK } from '../../utils/gameLogic';
-import { SFX, Haptics } from '../../utils/engine';
+import { Haptics } from '../../utils/engine';
 
 export const CategoryManager = () => {
   const {

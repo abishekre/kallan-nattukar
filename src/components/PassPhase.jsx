@@ -113,11 +113,11 @@ const PassPhase = () => {
           <div className="flex-1 w-full flex items-center justify-center p-4 relative z-10 pt-12">
             <AnimatePresence>
               {showWord ? (
-                <motion.div 
-                  initial={{ opacity: 0, y: -20, filter: 'blur(10px)' }}
-                  animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
-                  exit={{ opacity: 0, filter: 'blur(10px)' }}
-                  transition={{ duration: 0.3 }}
+                <motion.div
+                  initial={{ opacity: 0, y: -20, scale: 0.85, filter: 'blur(10px)' }}
+                  animate={{ opacity: 1, y: 0, scale: 1, filter: 'blur(0px)' }}
+                  exit={{ opacity: 0, scale: 0.9, filter: 'blur(10px)' }}
+                  transition={{ type: 'spring', damping: 14, stiffness: 220 }}
                   className="flex flex-col items-center gap-4 w-full"
                 >
                   {activePlayer.role === 'Pottan' ? (
@@ -171,7 +171,7 @@ const PassPhase = () => {
                   transition={{ duration: isHolding ? 0.5 : 0.2, ease: "linear" }}
                 />
               </svg>
-              <Fingerprint size={64} className={`transition-all duration-300 ${isHolding ? 'text-mural-gold scale-110 drop-shadow-[0_0_10px_rgba(244,162,97,0.5)]' : 'text-coconut/50'}`} />
+              <Fingerprint size={64} className={`transition-[color,transform] duration-300 ${isHolding ? 'text-mural-gold scale-110 drop-shadow-[0_0_10px_rgba(244,162,97,0.5)]' : 'text-coconut/50'}`} />
             </div>
             <motion.p 
               animate={{ opacity: isHolding ? 0 : 1 }} 

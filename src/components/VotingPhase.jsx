@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Vote, Skull, X, Check, ArrowRight, ShieldAlert, Target } from 'lucide-react';
 import { useGame } from '../GameContext';
@@ -19,7 +19,6 @@ const VotingPhase = () => {
   const [eliminatedKallan, setEliminatedKallan] = useState(null);
 
   const activePlayers = assignedRoles.filter(p => !p.eliminated);
-  const activeKallans = activePlayers.filter(p => p.role === 'Kallan');
   const activeNattukar = activePlayers.filter(p => p.role === 'Nattukaran');
 
   const confirmElimination = () => {
@@ -199,9 +198,12 @@ const VotingPhase = () => {
   }
 
   return (
-    <motion.div 
+    <motion.div
       initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
+      animate={dyingPlayerId
+        ? { opacity: 1, scale: 1, x: [0, -8, 8, -6, 6, -3, 0] }
+        : { opacity: 1, scale: 1, x: 0 }}
+      transition={dyingPlayerId ? { duration: 0.5 } : { duration: 0.3 }}
       className="flex flex-col h-full w-full gap-6 py-8 relative"
     >
       <div className="text-center mb-2">

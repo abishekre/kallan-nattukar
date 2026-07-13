@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState } from 'react';
 
 export function useLocalStorage(key, initialValue) {
   // Store both the key and the value in state

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { MessageCircle, AlertTriangle, Clock, HelpCircle, ChevronDown, ChevronUp } from 'lucide-react';
 import { useGame } from '../GameContext';
 import { SFX, Haptics } from '../utils/engine';
@@ -15,7 +15,8 @@ const chalis = [
 
 const DiscussPhase = () => {
   const { setGameState, enablePottan, timerDuration } = useGame();
-  
+  const reduceMotion = useReducedMotion();
+
   const [timeLeft, setTimeLeft] = useState(timerDuration);
   const [showHelp, setShowHelp] = useState(false);
   const [canVote, setCanVote] = useState(false);
@@ -68,16 +69,23 @@ const DiscussPhase = () => {
 
   const isDanger = timeLeft > 0 && timeLeft <= 30;
 
+  // Edge-latches so the danger cue and the time-up cue each fire exactly once,
+  // even if a backgrounded tab throttles the interval and we skip past the
+  // exact second (e.g. jump from 32 -> 28 would miss `=== 30`).
+  const dangerFiredRef = useRef(false);
+  const timeUpFiredRef = useRef(false);
+
   useEffect(() => {
-    if (timerDuration > 0) {
-      if (timeLeft === 30) {
-        Haptics.heavy();
-        SFX.drone.setSpeed(true);
-      }
-      if (timeLeft === 0) {
-        SFX.drone.stop();
-        Haptics.heartbeat();
-      }
+    if (timerDuration <= 0) return;
+    if (!dangerFiredRef.current && timeLeft <= 30 && timeLeft > 0) {
+      dangerFiredRef.current = true;
+      Haptics.heavy();
+      SFX.drone.setSpeed(true);
+    }
+    if (!timeUpFiredRef.current && timeLeft <= 0) {
+      timeUpFiredRef.current = true;
+      SFX.drone.stop();
+      Haptics.heartbeat();
     }
   }, [timeLeft, timerDuration]);
 
@@ -135,11 +143,11 @@ const DiscussPhase = () => {
     >
       <AnimatePresence>
         {isDanger && (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0 }}
-            animate={{ opacity: [0.2, 0.6, 0.2] }}
+            animate={{ opacity: reduceMotion ? 0.4 : [0.2, 0.6, 0.2] }}
             exit={{ opacity: 0 }}
-            transition={{ repeat: Infinity, duration: 1 }}
+            transition={reduceMotion ? { duration: 0.3 } : { repeat: Infinity, duration: 1 }}
             className="absolute inset-0 pointer-events-none z-0"
             style={{ boxShadow: 'inset 0 0 150px rgba(230,57,70, 0.8)' }}
           />
@@ -147,15 +155,19 @@ const DiscussPhase = () => {
       </AnimatePresence>
 
       <div className="text-center w-full relative z-10">
-        <motion.div 
-          animate={timerDuration === 0 ? { 
-            boxShadow: ['0 0 0px rgba(244,162,97,0)', '0 0 40px rgba(244,162,97,0.3)', '0 0 0px rgba(244,162,97,0)'],
-            scale: [1, 1.05, 1]
-          } : {}}
+        <motion.div
+          animate={timerDuration === 0 && !reduceMotion ? { scale: [1, 1.05, 1] } : {}}
           transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-          className="inline-block rounded-full p-2"
+          className="relative inline-block rounded-full p-2"
         >
-          <MessageCircle size={48} className="text-mural-gold mx-auto mb-2" />
+          {timerDuration === 0 && !reduceMotion && (
+            <motion.div
+              animate={{ opacity: [0, 0.6, 0] }}
+              transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+              className="absolute inset-0 rounded-full bg-mural-gold blur-lg"
+            />
+          )}
+          <MessageCircle size={48} className="relative z-10 text-mural-gold mx-auto mb-2" />
         </motion.div>
         <h2 className="text-4xl font-display font-bold text-mural-gold mb-1">Discussion</h2>
         <p className="text-coconut/80 mb-4">Time to find the Kallan!</p>
@@ -263,9 +275,9 @@ const DiscussPhase = () => {
           className="btn-danger w-full text-lg shadow-[0_0_30px_rgba(230,57,70,0.3)] shrink-0 disabled:opacity-50 relative overflow-hidden"
         >
           <span className="relative z-10 mix-blend-difference">{canVote ? (holdProgress > 0 ? "HOLDING..." : "HOLD TO VOTE") : "DISCUSS..."}</span>
-          <motion.div 
-            className="absolute top-0 left-0 bottom-0 bg-white"
-            style={{ width: `${holdProgress}%` }}
+          <motion.div
+            className="absolute top-0 left-0 bottom-0 w-full bg-white origin-left"
+            style={{ transform: `scaleX(${holdProgress / 100})` }}
           />
         </button>
       </div>

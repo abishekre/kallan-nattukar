@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Users, UserPlus, X } from 'lucide-react';
 import { useGame } from '../../GameContext';
-import { SFX, Haptics } from '../../utils/engine';
+import { Haptics, generateId } from '../../utils/engine';
 
 export const PlayerList = () => {
   const { players, setPlayers } = useGame();
@@ -48,7 +48,7 @@ export const PlayerList = () => {
         setTimeout(() => setDuplicateError(false), 500);
         return;
       }
-      setPlayers([...players, { id: crypto.randomUUID(), name }]);
+      setPlayers([...players, { id: generateId(), name }]);
       setNewPlayerName('');
       setDuplicateError(false);
       Haptics.light();

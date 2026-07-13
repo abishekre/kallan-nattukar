@@ -2,6 +2,7 @@ import { useEffect, useState, Suspense, lazy } from 'react';
 import { useGame } from './GameContext';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Download } from 'lucide-react';
+import { CelebrationOverlay } from './components/ui/CelebrationOverlay';
 
 const SetupPhase = lazy(() => import('./components/SetupPhase'));
 const PassPhase = lazy(() => import('./components/PassPhase'));
@@ -11,13 +12,13 @@ const ResultsPhase = lazy(() => import('./components/ResultsPhase'));
 const AboutPhase = lazy(() => import('./components/AboutPhase'));
 
 function App() {
-  const { gameState, setDeferredPrompt } = useGame();
-  
+  const { gameState, deferredPrompt, setDeferredPrompt } = useGame();
+
   const [showInstallNag, setShowInstallNag] = useState(false);
 
   useEffect(() => {
     let visits = parseInt(localStorage.getItem('kn_visitCount') || '0', 10);
-    
+
     if (!sessionStorage.getItem('kn_session_active')) {
       visits += 1;
       localStorage.setItem('kn_visitCount', visits.toString());
@@ -33,19 +34,21 @@ function App() {
     };
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-
-    // For testing in dev:
-    // if (visits >= 3 && localStorage.getItem('kn_installDismissed') !== 'true') {
-    //   setShowInstallNag(true);
-    // }
-
     return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-  }, []);
+  }, [setDeferredPrompt]);
 
+  // Fire the real browser install flow from the nag. Falls back gracefully if
+  // the prompt is no longer available (e.g. already installed).
   const handleInstallClick = async () => {
-    // We can't access deferredPrompt directly here anymore, but SetupPhase will handle the button click.
-    // If we need the install logic here for the nag screen:
-    alert("Please install from the Setup Phase screen or browser menu.");
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      try {
+        const { outcome } = await deferredPrompt.userChoice;
+        if (outcome === 'accepted') setDeferredPrompt(null);
+      } catch {
+        /* user dismissed */
+      }
+    }
     setShowInstallNag(false);
   };
 
@@ -77,7 +80,7 @@ function App() {
     <div className="min-h-screen bg-kerala-green text-coconut p-4 md:p-8 flex flex-col items-center justify-center relative overflow-hidden">
       {/* Background decor - simplified for performance and clean aesthetic */}
       <div className="absolute top-0 left-0 w-full h-full z-0 pointer-events-none opacity-[0.03]" style={{ backgroundImage: 'radial-gradient(circle at 20px 20px, #F4A261 2px, transparent 0)', backgroundSize: '40px 40px' }}></div>
-      
+
       <main className="z-10 w-full max-w-md h-full flex flex-col">
         <Suspense fallback={<div className="flex items-center justify-center h-full text-mural-gold/50">Loading...</div>}>
           <AnimatePresence mode="wait">
@@ -86,9 +89,12 @@ function App() {
         </Suspense>
       </main>
 
+      {/* Global celebration layer (level-ups + achievement toasts) */}
+      <CelebrationOverlay />
+
       <AnimatePresence>
         {showInstallNag && (
-          <motion.div 
+          <motion.div
             role="alert"
             aria-live="polite"
             initial={{ opacity: 0, y: 50 }}

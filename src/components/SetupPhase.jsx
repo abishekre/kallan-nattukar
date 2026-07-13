@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Users as UsersIcon, BookOpen, Play, X, Download } from 'lucide-react';
+import { Users as UsersIcon, BookOpen, Play, X, Download, ScrollText, Flame } from 'lucide-react';
 import { useGame } from '../GameContext';
 import { SFX, Haptics } from '../utils/engine';
 
@@ -8,15 +8,19 @@ import { PlayerList } from './setup/PlayerList';
 import { GameSettings } from './setup/GameSettings';
 import { CategoryManager } from './setup/CategoryManager';
 import { GroupProfilesManager } from './setup/GroupProfilesManager';
+import { RankBadge } from './ui/RankBadge';
+import ChronicleView from './ChronicleView';
 
 const SetupPhase = () => {
-  const { 
+  const {
     players, selectedCategories, roundCount,
-    startGame, setGameState, clearCurrentScores
+    startGame, setGameState, clearCurrentScores,
+    villageXp, dailyStreak,
   } = useGame();
-  
+
   const [showRules, setShowRules] = useState(false);
   const [showProfiles, setShowProfiles] = useState(false);
+  const [showChronicle, setShowChronicle] = useState(false);
   const [confirmAction, setConfirmAction] = useState(null);
   const { deferredPrompt, setDeferredPrompt } = useGame();
   const [showIOSInstallPrompt, setShowIOSInstallPrompt] = useState(false);
@@ -59,32 +63,55 @@ const SetupPhase = () => {
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col h-full w-full py-8 max-w-md mx-auto relative z-10">
         
-      <div className="flex justify-between items-start mb-6 mt-4 px-4">
+      <div className="flex justify-between items-start mb-3 mt-4 px-4">
         <div className="flex flex-col text-left">
           <h1 className="text-4xl md:text-5xl font-black text-mural-gold mb-1 tracking-tighter leading-none font-display">
             KALLAN <br/><span className="text-theyyam-red">&</span> NATTUKAR
           </h1>
           <p className="text-coconut/70 text-xs md:text-sm font-medium mb-2">The Mallu Imposter Game</p>
-          {roundCount > 0 && (
-            <div className="bg-mural-gold/20 border border-mural-gold/50 text-mural-gold px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest w-max">
-              Round {roundCount}
-            </div>
-          )}
+          <div className="flex items-center gap-2">
+            {roundCount > 0 && (
+              <div className="bg-mural-gold/20 border border-mural-gold/50 text-mural-gold px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest w-max">
+                Round {roundCount}
+              </div>
+            )}
+            {dailyStreak?.current > 0 && (
+              <div className="bg-theyyam-red/15 border border-theyyam-red/40 text-theyyam-red px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest w-max flex items-center gap-1">
+                <Flame size={11} className="animate-pulse" /> {dailyStreak.current} day{dailyStreak.current > 1 ? 's' : ''}
+              </div>
+            )}
+          </div>
         </div>
         <div className="flex gap-2 shrink-0 pt-1">
-          <button 
+          <button
+            onClick={() => { Haptics.light(); setShowChronicle(true); }}
+            className="bg-white/10 p-2 md:p-3 rounded-full hover:bg-white/20 transition-colors active:scale-95 flex items-center justify-center relative"
+            aria-label="Open Panchayat Chronicle"
+          >
+            <ScrollText size={20} className="md:w-6 md:h-6" />
+          </button>
+          <button
             onClick={() => { Haptics.light(); setShowProfiles(true); }}
             className="bg-white/10 p-2 md:p-3 rounded-full hover:bg-white/20 transition-colors active:scale-95 flex items-center justify-center relative"
+            aria-label="Switch village"
           >
             <UsersIcon size={20} className="md:w-6 md:h-6" />
           </button>
-          <button 
+          <button
             onClick={() => { Haptics.light(); setShowRules(true); }}
             className="bg-white/10 p-2 md:p-3 rounded-full hover:bg-white/20 transition-colors active:scale-95 hidden md:flex items-center justify-center"
+            aria-label="How to play"
           >
             <BookOpen size={20} className="md:w-6 md:h-6" />
           </button>
         </div>
+      </div>
+
+      {/* Village rank progress — always-visible progression nudge */}
+      <div className="px-4 mb-4">
+        <button onClick={() => { Haptics.light(); setShowChronicle(true); }} className="w-full text-left active:scale-[0.98] transition-transform">
+          <RankBadge xp={villageXp} />
+        </button>
       </div>
 
       <div className="flex-1 overflow-y-auto px-4 pb-12 flex flex-col gap-6">
@@ -155,6 +182,8 @@ const SetupPhase = () => {
       </AnimatePresence>
 
       <GroupProfilesManager showProfiles={showProfiles} setShowProfiles={setShowProfiles} />
+
+      <ChronicleView show={showChronicle} onClose={() => setShowChronicle(false)} />
 
       {/* Custom Confirm Modal (Clean aesthetic) */}
       <AnimatePresence>

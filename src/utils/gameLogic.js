@@ -216,8 +216,8 @@ const getRecentWords = () => {
 const saveRecentWords = (words) => {
   try {
     localStorage.setItem('kn_recentWords', JSON.stringify(words));
-  } catch (e) {
-    // Ignore
+  } catch {
+    // Storage full or unavailable — non-critical, ignore.
   }
 };
 
@@ -351,15 +351,38 @@ export const calculateWinCondition = ({ assignedRoles, pottanStoleWin, multiRoun
     const eliminatedPlayers = assignedRoles.filter(p => p.eliminated);
     if (eliminatedPlayers.length > 0) {
       const eliminatedKallan = eliminatedPlayers.find(p => p.role === 'Kallan');
+      const wasPottanOnly = eliminatedPlayers.every(p => p.role === 'Pottan');
       if (eliminatedKallan) {
         winner = 'NATTUKAR WON!';
         winReason = `You successfully caught a Kallan! (${eliminatedKallan.name})`;
         winningTeam = 'nattukar';
+      } else if (wasPottanOnly && activeKallans.length <= activeNattukar.length) {
+        // Pottan voted out, guessed wrong: Kallans only win if they outnumber the Nattukar.
+        winner = 'NATTUKAR WON!';
+        winReason = `You voted out the Pottan (${eliminatedPlayers.map(p => p.name).join(', ')}), and their wrong guess exposed the Kallans!`;
+        winningTeam = 'nattukar';
       } else {
         winner = 'KALLANS WON!';
-        winReason = `You killed ${eliminatedPlayers.map(p => `${p.name} (${p.role})`).join(', ')}! The Kallans escaped!`;
+        winReason = wasPottanOnly
+          ? `You voted out the Pottan (${eliminatedPlayers.map(p => p.name).join(', ')})! The Kallans slipped away!`
+          : `You killed ${eliminatedPlayers.map(p => `${p.name} (${p.role})`).join(', ')}! The Kallans escaped!`;
         winningTeam = 'kallans';
       }
+    }
+  }
+
+  // Defensive fallback: the Results screen must never render an empty verdict.
+  // This can only be hit by an unexpected state, but we guarantee a sane value.
+  if (!winningTeam) {
+    const anyKallanEliminated = assignedRoles.some(p => p.eliminated && p.role === 'Kallan');
+    if (anyKallanEliminated) {
+      winner = 'NATTUKAR WON!';
+      winReason = 'A Kallan was caught!';
+      winningTeam = 'nattukar';
+    } else {
+      winner = 'KALLANS WON!';
+      winReason = 'The Kallans slipped away into the night!';
+      winningTeam = 'kallans';
     }
   }
 
@@ -372,8 +395,7 @@ export const calculateScores = ({ assignedRoles, winningTeam, enableScoreboard }
   if (!enableScoreboard || !winningTeam) return [];
 
   const pointAssignments = [];
-  const wrongfulKills = assignedRoles.filter(p => p.eliminated && p.role === 'Nattukaran');
-  
+
   assignedRoles.forEach(p => {
     let pts = 0;
     let won = false;
