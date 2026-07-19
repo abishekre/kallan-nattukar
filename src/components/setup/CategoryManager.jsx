@@ -25,13 +25,18 @@ export const CategoryManager = () => {
   };
 
   const createCustomCategory = () => {
-    if (newCategoryName.trim() && !customCategoriesData[newCategoryName.trim()]) {
-      const name = newCategoryName.trim();
-      setCustomCategoriesData({ ...customCategoriesData, [name]: [] });
-      setEditingCategory(name);
-      setNewCategoryName('');
-      Haptics.light();
+    const name = newCategoryName.trim();
+    if (!name) return;
+    // Block collisions with built-in categories too — a custom "Movies" would
+    // shadow the built-in word bank and duplicate keys in the category list.
+    if (customCategoriesData[name] || WORD_BANK[name]) {
+      Haptics.heavy();
+      return;
     }
+    setCustomCategoriesData({ ...customCategoriesData, [name]: [] });
+    setEditingCategory(name);
+    setNewCategoryName('');
+    Haptics.light();
   };
 
   const deleteCustomCategory = (name) => {

@@ -12,6 +12,8 @@ export const GameSettings = ({ onClearScores }) => {
     selectedCategories,
     timerDuration, setTimerDuration,
     multiRoundVoting, setMultiRoundVoting,
+    enableCaughtBy, setEnableCaughtBy,
+    enableScoreboard, setEnableScoreboard,
     enableAudio, setEnableAudio,
     wordDifficulty, setWordDifficulty
   } = useGame();
@@ -130,6 +132,16 @@ export const GameSettings = ({ onClearScores }) => {
 
                 <div className="flex items-center justify-between">
                   <div>
+                    <span className="block text-sm font-bold">Log Who Caught Them</span>
+                    <span className="text-xs text-coconut/50">Track which Nattukaran caught each Kallan</span>
+                  </div>
+                  <button onClick={() => setEnableCaughtBy(!enableCaughtBy)} className={`w-12 h-6 rounded-full transition-colors relative ${enableCaughtBy ? 'bg-mural-gold' : 'bg-white/10'}`}>
+                    <div className={`w-4 h-4 rounded-full bg-white absolute top-1 transition-transform ${enableCaughtBy ? 'left-7' : 'left-1'}`} />
+                  </button>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div>
                     <span className="block text-sm font-bold">Global Audio</span>
                     <span className="text-xs text-coconut/50">Music, SFX, and Haptics</span>
                   </div>
@@ -157,11 +169,19 @@ export const GameSettings = ({ onClearScores }) => {
                 </div>
 
 
-                <div className="border-t border-white/5 pt-2 flex justify-between items-center">
-                  <span className="text-xs text-coconut/50 font-bold">SCOREBOARD</span>
-                  <button onClick={onClearScores} className="text-xs text-theyyam-red font-bold p-1 active:opacity-50">
-                    Reset Points
-                  </button>
+                <div className="border-t border-white/5 pt-4 flex items-center justify-between">
+                  <div>
+                    <span className="block text-sm font-bold">Scoreboard</span>
+                    <span className="text-xs text-coconut/50">Track points across rounds</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <button onClick={onClearScores} className="text-xs text-theyyam-red font-bold p-1 active:opacity-50">
+                      Reset Points
+                    </button>
+                    <button onClick={() => setEnableScoreboard(!enableScoreboard)} className={`w-12 h-6 rounded-full transition-colors relative shrink-0 ${enableScoreboard ? 'bg-mural-gold' : 'bg-white/10'}`}>
+                      <div className={`w-4 h-4 rounded-full bg-white absolute top-1 transition-transform ${enableScoreboard ? 'left-7' : 'left-1'}`} />
+                    </button>
+                  </div>
                 </div>
 
               </div>

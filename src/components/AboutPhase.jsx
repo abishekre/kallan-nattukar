@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { Heart, Code2, Coffee, ArrowLeft, Camera, Briefcase } from 'lucide-react';
+import { Heart, Code2, Coffee, ArrowLeft, Camera, Briefcase, Globe } from 'lucide-react';
 import { useGame } from '../GameContext';
 
 const AboutPhase = () => {
@@ -53,6 +53,9 @@ const AboutPhase = () => {
           </a>
           <a href="https://www.linkedin.com/in/abishek-r-edakkalathur-4822a3217/" aria-label="LinkedIn Profile" target="_blank" rel="noopener noreferrer" className="flex-1 bg-white/5 hover:bg-white/10 transition-colors border border-white/10 p-3 rounded-xl flex justify-center items-center">
             <Briefcase size={20} className="text-mural-gold" />
+          </a>
+          <a href="https://www.abishekre.in/" aria-label="Portfolio Website" target="_blank" rel="noopener noreferrer" className="flex-1 bg-white/5 hover:bg-white/10 transition-colors border border-white/10 p-3 rounded-xl flex justify-center items-center">
+            <Globe size={20} className="text-mural-gold" />
           </a>
         </div>
 

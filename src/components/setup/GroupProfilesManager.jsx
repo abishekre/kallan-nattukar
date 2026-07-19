@@ -95,7 +95,7 @@ export const GroupProfilesManager = ({ showProfiles, setShowProfiles }) => {
                     </button>
                   )}
 
-                  {!editingProfileId && (
+                  {editingProfileId !== p.id && (
                     <div className="flex items-center gap-1 shrink-0 ml-2">
                       <button 
                         onClick={(e) => { e.stopPropagation(); setEditingProfileId(p.id); setEditProfileName(p.name); }}

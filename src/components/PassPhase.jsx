@@ -107,6 +107,7 @@ const PassPhase = () => {
           onPointerDown={handleHoldStart}
           onPointerUp={handleHoldEnd}
           onPointerLeave={handleHoldEnd}
+          onPointerCancel={handleHoldEnd}
           onContextMenu={(e) => e.preventDefault()}
         >
           {/* Top/Center: Word Reveal Area */}

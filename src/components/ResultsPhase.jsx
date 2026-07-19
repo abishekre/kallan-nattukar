@@ -12,7 +12,7 @@ const ResultsPhase = () => {
   const {
     assignedRoles, resetGame, playAgainSamePlayers,
     enablePottan, multiRoundVoting, enableScoreboard,
-    scores, pottanStoleWin,
+    scores, pottanStoleWin, players,
     gossipText, setGossipText, activeDifficulty,
     finalizeRound,
   } = useGame();
@@ -80,6 +80,21 @@ const ResultsPhase = () => {
   // Cleanup auto-rematch timer.
   useEffect(() => () => { if (autoTimerRef.current) clearInterval(autoTimerRef.current); }, []);
 
+  // React the moment the countdown crosses zero. Side effects (SFX, starting the
+  // next round) live here, NOT inside the setState updater — React may invoke
+  // updaters more than once (StrictMode does), which double-started rounds.
+  useEffect(() => {
+    if (autoCountdown === null) return;
+    if (autoCountdown <= 0) {
+      if (autoTimerRef.current) clearInterval(autoTimerRef.current);
+      setAutoCountdown(null);
+      SFX.swoosh();
+      playAgainSamePlayers();
+    } else if (autoCountdown < 3) {
+      SFX.tick();
+    }
+  }, [autoCountdown, playAgainSamePlayers]);
+
   const startAutoRematch = () => {
     if (autoCountdown !== null) {
       // Cancel
@@ -90,18 +105,17 @@ const ResultsPhase = () => {
     Haptics.light();
     setAutoCountdown(3);
     autoTimerRef.current = setInterval(() => {
-      setAutoCountdown(prev => {
-        if (prev <= 1) {
-          clearInterval(autoTimerRef.current);
-          SFX.swoosh();
-          playAgainSamePlayers();
-          return null;
-        }
-        SFX.tick();
-        return prev - 1;
-      });
+      setAutoCountdown(prev => (prev === null ? null : prev - 1));
     }, 1000);
   };
+
+  // Stats are keyed by player id and span every round this village has played,
+  // so resolve names from the current round first, then the full roster —
+  // otherwise past players all render as an anonymous "Nattukaran".
+  const resolveName = (id) =>
+    assignedRoles.find(p => p.id === id)?.name ||
+    players.find(p => p.id === id)?.name ||
+    'Nattukaran';
 
   const getAwards = () => {
     if (!enableScoreboard) return [];
@@ -109,7 +123,7 @@ const ResultsPhase = () => {
     // round's line-up — matches the "cumulative for this village" intent.
     const playerStats = Object.entries(scores).map(([id, stats]) => ({
       id,
-      name: assignedRoles.find(p => p.id === id)?.name || villageNameFallback(id),
+      name: resolveName(id),
       stats: stats || {},
     }));
 
@@ -134,12 +148,13 @@ const ResultsPhase = () => {
   const leaderboard = useMemo(() => {
     const rows = Object.entries(scores).map(([id, stats]) => ({
       id,
-      name: assignedRoles.find(p => p.id === id)?.name || villageNameFallback(id),
+      name: resolveName(id),
       inRound: assignedRoles.some(p => p.id === id),
       stats: stats || {},
     }));
     return rows.sort((a, b) => (b.stats.points || 0) - (a.stats.points || 0));
-  }, [scores, assignedRoles]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scores, assignedRoles, players]);
 
   const getWinnerColor = () => {
     if (winner.includes('NATTUKAR')) return 'text-mural-gold drop-shadow-[0_0_15px_rgba(244,162,97,0.5)]';
@@ -385,10 +400,6 @@ const ResultsPhase = () => {
     </>
   );
 };
-
-// Small fallback so leaderboard rows for players not in the current round still
-// render a name if one isn't resolvable (defensive; normally unused).
-const villageNameFallback = () => 'Nattukaran';
 
 // Gossip line generator (kept as a pure helper so the effect stays lean).
 function buildGossip({ winningTeam, wrongfulKills, kallans, pottan }) {

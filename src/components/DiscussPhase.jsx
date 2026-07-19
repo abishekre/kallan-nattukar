@@ -268,6 +268,7 @@ const DiscussPhase = () => {
         onPointerDown={startHold}
         onPointerUp={endHold}
         onPointerLeave={endHold}
+        onPointerCancel={endHold}
         onContextMenu={(e) => e.preventDefault()}
       >
         <button 

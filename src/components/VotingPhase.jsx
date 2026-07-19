@@ -8,7 +8,7 @@ import { Embers } from './ui/Embers';
 
 const VotingPhase = () => {
   const { assignedRoles, eliminatePlayer, setGameState, multiRoundVoting, setPottanStoleWin, enableCaughtBy } = useGame();
-  
+
   const [selectedPlayer, setSelectedPlayer] = useState(null);
   const [eliminationResult, setEliminationResult] = useState(null);
   const [pottanGuessing, setPottanGuessing] = useState(false);
@@ -65,8 +65,14 @@ const VotingPhase = () => {
 
     if (multiRoundVoting) {
       if (newActiveKallans === 0 || newActiveKallans >= (newActiveNattukar + pottanAlive)) {
+        // Leaving this screen entirely — don't also flip pottanGuessing/heroPrompt
+        // here. AnimatePresence keeps this component alive mid page-transition,
+        // so a local branch-switch in the same tick as setGameState makes it
+        // briefly re-render the wrong (base) view instead of just fading out.
         setGameState('results');
       } else {
+        setPottanGuessing(false);
+        setHeroPrompt(false);
         setEliminationResult({
           player: eliminatedPlayer,
           role: eliminatedPlayer.role,
@@ -91,14 +97,12 @@ const VotingPhase = () => {
   };
 
   const nextRound = () => {
-    setEliminationResult(null);
-    setGameState('discuss'); 
+    setGameState('discuss');
   };
 
   const handleHeroSelection = (heroId) => {
     Haptics.light();
     eliminatePlayer(eliminatedKallan.id, heroId);
-    setHeroPrompt(false);
     proceedAfterElimination(eliminatedKallan);
   };
 
@@ -168,17 +172,22 @@ const VotingPhase = () => {
 
   if (eliminationResult) {
     const isKallan = eliminationResult.role === 'Kallan';
+    const isPottan = eliminationResult.role === 'Pottan';
     return (
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
         className="flex flex-col items-center justify-center h-full w-full gap-8 absolute inset-0 bg-kerala-green z-30 p-8 text-center"
       >
-        <Skull size={64} className={isKallan ? 'text-mural-gold' : 'text-theyyam-red'} />
+        <Skull size={64} className={isKallan ? 'text-mural-gold' : isPottan ? 'text-green-400' : 'text-theyyam-red'} />
         <div>
           <h2 className="text-3xl font-display font-bold mb-2">{eliminationResult.player.name} was eliminated!</h2>
           <p className="text-xl">
-            They were {isKallan ? <span className="text-mural-gold font-bold">a KALLAN!</span> : <span className="text-theyyam-red font-bold">innocent! Oru abadham patti...</span>}
+            They were {isKallan
+              ? <span className="text-mural-gold font-bold">a KALLAN!</span>
+              : isPottan
+                ? <span className="text-green-400 font-bold">the POTTAN!</span>
+                : <span className="text-theyyam-red font-bold">innocent! Oru abadham patti...</span>}
           </p>
         </div>
         
